@@ -104,7 +104,7 @@ void loop() {
     uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
     uint8_t uidLength;
 
-    success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+    success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 2000);
 
     if (success) {
       uint8_t key[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -119,11 +119,19 @@ void loop() {
           Serial.print("Credit: ");
           Serial.println(dataBlock5[1]);
 
-          choose_program = false;
-          pay = false;
-
           if (dataBlock5[1] >= number.toInt()) {
             Serial.println("Enough credit. Paid");
+
+            choose_program = false;
+            pay = false;
+
+            uint8_t writeBlock5[16] = {dataBlock5[0], dataBlock5[1] - number.toInt(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            success = nfc.mifareclassic_WriteDataBlock(5, writeBlock5);
+            if (success) {
+              Serial.println("User ID and credit written to block 5");
+            } else {
+              Serial.println("Failed to write user ID to block 5");
+            }
 
             lcd.clear();
             lcd.setCursor(0, 0);
@@ -133,6 +141,8 @@ void loop() {
             pay = false;
             choose_program = false;
             start_wash = true;
+
+            delay(3000);
           } else {
             lcd.clear();
             lcd.setCursor(0, 0);
@@ -146,8 +156,6 @@ void loop() {
       } else {
         Serial.println("Authentication failed");
       }
-
-      delay(3000);
     }
   }
 
